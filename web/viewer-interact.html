@@ -42,6 +42,7 @@ See https://github.com/adobe-type-tools/cmap-resources
 <!--#endif-->
 
 <!--#if !PRODUCTION-->
+    <script src="../node_modules/interactjs/dist/interact.js"></script>
     <script defer src="../node_modules/es-module-shims/dist/es-module-shims.js"></script>
     <script type="importmap-shim">
       {
@@ -65,14 +66,22 @@ See https://github.com/adobe-type-tools/cmap-resources
 <!--#else-->
 <!--#include viewer-snippet-minified.html-->
 <!--#endif-->
+
 <style>
-  .selection-rect {
-  position: absolute;
-  top: 0;
-  left: 0;
-  background: yellow;
-  opacity: 0;
-  pointer-events: none;
+.resize-drag {
+  width: 120px;
+  border-radius: 8px;
+  padding: 20px;
+  margin: 1rem;
+  background-color: #29e;
+  color: white;
+  font-size: 20px;
+  font-family: sans-serif;
+
+  touch-action: none;
+
+  /* This makes things *much* easier */
+  box-sizing: border-box;
   z-index: 10000;
 }
 </style>
@@ -80,7 +89,6 @@ See https://github.com/adobe-type-tools/cmap-resources
   </head>
 
   <body tabindex="1">
-    <div class="selection-rect"></div>
     <div id="outerContainer">
 
       <div id="sidebarContainer">
@@ -263,17 +271,7 @@ See https://github.com/adobe-type-tools/cmap-resources
                 </div>
                 <input type="number" id="pageNumber" class="toolbarField pageNumber" title="Page" value="1" size="4" min="1" tabindex="15" data-l10n-id="page" autocomplete="off">
                 <span id="numPages" class="toolbarLabel"></span>
-                <select id="category" class="toolbarField">
-                    <option>Référence Du Rapport Technique</option>
-                    <option>Date De Visite Du Rapport Technique</option>
-                    <option>Bureau de Contrôle</option>
-                    <option>Technicien de contrôle</option>
-                    <option>Propriétaire</option>
-                    <option>Syndic</option>
-                    <option>Site</option>
-                    <option>Appareil</option>
-                    <option>Observation</option>
-                </select>
+                <button class="toolbarButton" title="Annotation" id="rect"></button>
               </div>
               <div id="toolbarViewerRight">
                 <button id="presentationMode" class="toolbarButton presentationMode hiddenLargeView" title="Switch to Presentation Mode" tabindex="31" data-l10n-id="presentation_mode">
@@ -338,7 +336,6 @@ See https://github.com/adobe-type-tools/cmap-resources
             </div>
           </div>
         </div>
-
         <div id="viewerContainer" tabindex="0">
           <div id="viewer" class="pdfViewer"></div>
         </div>
@@ -456,104 +453,85 @@ See https://github.com/adobe-type-tools/cmap-resources
     </div> <!-- outerContainer -->
     <div id="printContainer"></div>
     <script>
-      function rectangleSelect(inputElements, selectionRectangle) {
-        var elements = [];
-        inputElements.forEach(function(element) {
-          var box = element.getBoundingClientRect();
+      const position = { x: 0, y: 0 };
 
-          if (
-            selectionRectangle.left <= box.left &&
-            selectionRectangle.top <= box.top &&
-            selectionRectangle.right >= box.right &&
-            selectionRectangle.bottom >= box.bottom
-          ) {
-            elements.push(element);
-          }
-        });
-        return elements;
-      } 
-      function getSelectionRectNode() {
-        return document.querySelector(".selection-rect");
+      (function (){
+        interact('.resize-drag')
+          .resizable({
+          // resize from all edges and corners
+            edges: { left: true, right: true, bottom: true, top: true },
+            listeners: {
+              move (event) {
+                var target = event.target
+                var x = (parseFloat(target.getAttribute('data-x')) || 0)
+                var y = (parseFloat(target.getAttribute('data-y')) || 0)
+
+                // update the element's style
+                target.style.width = event.rect.width + 'px'
+                target.style.height = event.rect.height + 'px'
+
+                // translate when resizing from top or left edges
+                x += event.deltaRect.left
+                y += event.deltaRect.top
+
+                target.style.transform = 'translate(' + x + 'px,' + y + 'px)'
+
+                target.setAttribute('data-x', x)
+                target.setAttribute('data-y', y)
+                target.textContent = Math.round(event.rect.width) + '\u00D7' + Math.round(event.rect.height)
+              }
+            },
+            modifiers: [
+              // keep the edges inside the parent
+              interact.modifiers.restrictEdges({
+                outer: 'parent'
+              }),
+
+              // minimum size
+              interact.modifiers.restrictSize({
+                min: { width: 50, height: 25 }
+              })
+            ],
+
+            inertia: true
+          })
+          .draggable({
+            listeners: { move: dragMoveListener },
+            inertia: true,
+            modifiers: [
+              interact.modifiers.restrictRect({
+                restriction: 'parent',
+                endOnly: true
+              })
+            ]
+          });
+          var rectmenu = document.querySelector("#rect");
+          rectmenu.addEventListener('click', function(){
+              var textlayer = document.querySelector("#viewer > div:nth-child(1) > div.textLayer");
+              // <div class="resize-drag"> Draggable & Resizable Element </div>
+              var dr = document.createElement("div");
+              dr.classList.add("resize-drag");
+              var t = document.createTextNode("Drag & Resize");
+              dr.appendChild(t);
+              dr.id="myDR";
+              textlayer.insertBefore(dr,textlayer.firstChild);
+              mydr = document.querySelector("#myDR");
+              mydr.style.position = 'absolute';
+            });
+      })();
+      function dragMoveListener (event) {
+              var target = event.target;
+              // keep the dragged position in the data-x/data-y attributes
+              var x = (parseFloat(target.getAttribute('data-x')) || 0) + event.dx;
+              var y = (parseFloat(target.getAttribute('data-y')) || 0) + event.dy;
+
+              // translate the element
+              target.style.transform = 'translate(' + x + 'px, ' + y + 'px)';
+
+              // update the posiion attributes
+              target.setAttribute('data-x', x);
+              target.setAttribute('data-y', y);
       }
-      function showSelectionRectangle(selection) {
-        var rect = getSelectionRectNode();
-        rect.style.left = `${selection.left}px`;
-        rect.style.top = `${selection.top }px`; // `${selection.top + window.scrollY}px`;
-        rect.style.width = `${selection.right - selection.left}px`;
-        rect.style.height = `${selection.bottom - selection.top}px`;
-        rect.style.opacity = 0.5;
-      }
-      function hideSelectionRectangle() {
-        var rect = getSelectionRectNode();
-        rect.style.opacity = 0;
-      }      
-      function initEventHandlers() {
-        var isMouseDown = false;
-        var selectionRectangle = {
-          top: 0,
-          left: 0,
-          right: 0,
-          bottom: 0
-        };      
-
-        function onMouseDown(e) {
-          isMouseDown = true;
-          selectionRectangle.left = e.clientX;
-          selectionRectangle.top = e.clientY;
-          e.stopPropagation();
-          return false;          
-        }
-
-        function onMouseMove(e) {
-          if (!isMouseDown) {
-            return;
-          }
-          selectionRectangle.right = e.clientX;
-          selectionRectangle.bottom = e.clientY;
-          showSelectionRectangle(selectionRectangle);
-          e.stopPropagation();
-          return false;
-          }
-
-        function onMouseUp(e) {
-          var page = document.querySelector("#pageNumber").value;
-          var divpage = document.querySelector(`.page[data-page-number="${page}"]`);
-          var spans = divpage.querySelectorAll("span");
-          var category = document.querySelector("#category").value;
-          for(var i = 0; i < spans.length; i++){
-            var rect = spans[i].getBoundingClientRect();
-            if ((rect.bottom <= selectionRectangle.bottom) &&
-                (rect.bottom >= selectionRectangle.top) &&
-                (rect.top <= selectionRectangle.bottom) &&
-                (rect.top >= selectionRectangle.top) &&
-                (rect.left >= selectionRectangle.left) &&
-                (rect.left <= selectionRectangle.right) &&
-                (rect.right >= selectionRectangle.left) &&
-                (rect.right <= selectionRectangle.right)
-                ){
-                  spans[i].style.backgroundColor = 'red';
-                  spans[i].title = category;
-            }
-          }
-          isMouseDown = false;
-          hideSelectionRectangle();
-          selectionRectangle = {
-            top: 0,
-            left: 0,
-            right: 0,
-            bottom: 0
-          };
-        }
-
-        document.addEventListener("mousedown", onMouseDown);
-        document.addEventListener("mousemove", onMouseMove);
-        document.addEventListener("mouseup", onMouseUp);
-      }
-      function init() {
-        initEventHandlers();
-      }
-
-      init();      
 
     </script>
   </body>

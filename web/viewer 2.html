@@ -500,8 +500,6 @@ See https://github.com/adobe-type-tools/cmap-resources
           isMouseDown = true;
           selectionRectangle.left = e.clientX;
           selectionRectangle.top = e.clientY;
-          e.stopPropagation();
-          return false;          
         }
 
         function onMouseMove(e) {
@@ -511,9 +509,7 @@ See https://github.com/adobe-type-tools/cmap-resources
           selectionRectangle.right = e.clientX;
           selectionRectangle.bottom = e.clientY;
           showSelectionRectangle(selectionRectangle);
-          e.stopPropagation();
-          return false;
-          }
+        }
 
         function onMouseUp(e) {
           var page = document.querySelector("#pageNumber").value;

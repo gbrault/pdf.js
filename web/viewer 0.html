@@ -65,22 +65,10 @@ See https://github.com/adobe-type-tools/cmap-resources
 <!--#else-->
 <!--#include viewer-snippet-minified.html-->
 <!--#endif-->
-<style>
-  .selection-rect {
-  position: absolute;
-  top: 0;
-  left: 0;
-  background: yellow;
-  opacity: 0;
-  pointer-events: none;
-  z-index: 10000;
-}
-</style>
 
   </head>
 
   <body tabindex="1">
-    <div class="selection-rect"></div>
     <div id="outerContainer">
 
       <div id="sidebarContainer">
@@ -263,17 +251,6 @@ See https://github.com/adobe-type-tools/cmap-resources
                 </div>
                 <input type="number" id="pageNumber" class="toolbarField pageNumber" title="Page" value="1" size="4" min="1" tabindex="15" data-l10n-id="page" autocomplete="off">
                 <span id="numPages" class="toolbarLabel"></span>
-                <select id="category" class="toolbarField">
-                    <option>Référence Du Rapport Technique</option>
-                    <option>Date De Visite Du Rapport Technique</option>
-                    <option>Bureau de Contrôle</option>
-                    <option>Technicien de contrôle</option>
-                    <option>Propriétaire</option>
-                    <option>Syndic</option>
-                    <option>Site</option>
-                    <option>Appareil</option>
-                    <option>Observation</option>
-                </select>
               </div>
               <div id="toolbarViewerRight">
                 <button id="presentationMode" class="toolbarButton presentationMode hiddenLargeView" title="Switch to Presentation Mode" tabindex="31" data-l10n-id="presentation_mode">
@@ -455,106 +432,5 @@ See https://github.com/adobe-type-tools/cmap-resources
 
     </div> <!-- outerContainer -->
     <div id="printContainer"></div>
-    <script>
-      function rectangleSelect(inputElements, selectionRectangle) {
-        var elements = [];
-        inputElements.forEach(function(element) {
-          var box = element.getBoundingClientRect();
-
-          if (
-            selectionRectangle.left <= box.left &&
-            selectionRectangle.top <= box.top &&
-            selectionRectangle.right >= box.right &&
-            selectionRectangle.bottom >= box.bottom
-          ) {
-            elements.push(element);
-          }
-        });
-        return elements;
-      } 
-      function getSelectionRectNode() {
-        return document.querySelector(".selection-rect");
-      }
-      function showSelectionRectangle(selection) {
-        var rect = getSelectionRectNode();
-        rect.style.left = `${selection.left}px`;
-        rect.style.top = `${selection.top }px`; // `${selection.top + window.scrollY}px`;
-        rect.style.width = `${selection.right - selection.left}px`;
-        rect.style.height = `${selection.bottom - selection.top}px`;
-        rect.style.opacity = 0.5;
-      }
-      function hideSelectionRectangle() {
-        var rect = getSelectionRectNode();
-        rect.style.opacity = 0;
-      }      
-      function initEventHandlers() {
-        var isMouseDown = false;
-        var selectionRectangle = {
-          top: 0,
-          left: 0,
-          right: 0,
-          bottom: 0
-        };      
-
-        function onMouseDown(e) {
-          isMouseDown = true;
-          selectionRectangle.left = e.clientX;
-          selectionRectangle.top = e.clientY;
-          e.stopPropagation();
-          return false;          
-        }
-
-        function onMouseMove(e) {
-          if (!isMouseDown) {
-            return;
-          }
-          selectionRectangle.right = e.clientX;
-          selectionRectangle.bottom = e.clientY;
-          showSelectionRectangle(selectionRectangle);
-          e.stopPropagation();
-          return false;
-          }
-
-        function onMouseUp(e) {
-          var page = document.querySelector("#pageNumber").value;
-          var divpage = document.querySelector(`.page[data-page-number="${page}"]`);
-          var spans = divpage.querySelectorAll("span");
-          var category = document.querySelector("#category").value;
-          for(var i = 0; i < spans.length; i++){
-            var rect = spans[i].getBoundingClientRect();
-            if ((rect.bottom <= selectionRectangle.bottom) &&
-                (rect.bottom >= selectionRectangle.top) &&
-                (rect.top <= selectionRectangle.bottom) &&
-                (rect.top >= selectionRectangle.top) &&
-                (rect.left >= selectionRectangle.left) &&
-                (rect.left <= selectionRectangle.right) &&
-                (rect.right >= selectionRectangle.left) &&
-                (rect.right <= selectionRectangle.right)
-                ){
-                  spans[i].style.backgroundColor = 'red';
-                  spans[i].title = category;
-            }
-          }
-          isMouseDown = false;
-          hideSelectionRectangle();
-          selectionRectangle = {
-            top: 0,
-            left: 0,
-            right: 0,
-            bottom: 0
-          };
-        }
-
-        document.addEventListener("mousedown", onMouseDown);
-        document.addEventListener("mousemove", onMouseMove);
-        document.addEventListener("mouseup", onMouseUp);
-      }
-      function init() {
-        initEventHandlers();
-      }
-
-      init();      
-
-    </script>
   </body>
 </html>
